@@ -1,0 +1,215 @@
+@use "sass:color";
+// 1. Include functions first (so you can manipulate colors, SVGs, calc, etc)
+//@import "../node_modules/bootstrap/scss/functions";
+
+// 1. Override Bootstrap Core Variables
+$body-bg: hsl(219, 29%, 18%);
+$body-color: hsl(219, 29%, 78%);
+$body-secondary-bg: hsl(217 36% 22%);
+$primary: hsl(338, 100%, 67%);
+$border-color: $body-color;
+
+$enable-dark-mode: true;
+
+//// Import Bootstrap parts (or the whole package)
+@import "../node_modules/bootstrap/scss/bootstrap";
+
+
+//
+//@use "../node_modules/bootstrap/scss/variables";
+//@use "../node_modules/bootstrap/scss/variables-dark";
+//
+//@use "../node_modules/bootstrap/scss/maps";
+//@use "../node_modules/bootstrap/scss/mixins";
+//@use "../node_modules/bootstrap/scss/root";
+//
+//@use "../node_modules/bootstrap/scss/utilities";
+//@use "../node_modules/bootstrap/scss/reboot";
+//@use "../node_modules/bootstrap/scss/type";
+//@use "../node_modules/bootstrap/scss/images";
+//@use "../node_modules/bootstrap/scss/containers";
+//@use "../node_modules/bootstrap/scss/grid";
+//@use "../node_modules/bootstrap/scss/helpers";
+
+//@import "../node_modules/bootstrap/scss/utilities/api";
+
+
+body {
+  margin: 0;
+  height: 100dvh;
+  background-color: $body-bg;
+
+  --bs-dark-bg-subtle: #{color.adjust($body-bg, $lightness: -5%)};
+}
+
+#graphiql {
+  height: 100%;
+}
+
+.loading {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+}
+
+.wrapper {
+  width: 100%;
+  height: 100%;
+
+
+  --c-text: #{$body-color};
+  --c-light: #{$light};
+  --c-base: #{$body-bg};
+  --c-primary: #{$primary};
+}
+
+.graphiql-container {
+  margin-top: -10px !important;
+  height: calc(100% - 20px) !important;
+}
+
+.s-topbar {
+
+  font-family: "Fira Code", Consolas, "Courier New", monospace;
+  background-color: var(--c-base);
+  color: var(--c-text);
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding-left: 20px;
+  padding-right: 20px;
+  font-size: 1rem;
+  flex-direction: row;
+  gap: 10px;
+  z-index: 1000 !important;
+  position: relative;
+}
+
+.s-icon-btn {
+  display: flex;
+  align-items: center;
+  padding: 6px;
+  background-color: transparent;
+  border-radius: 4px;
+  border: none;
+  color: var(--c-text);
+
+  svg {
+    height: 16px;
+    width: 16px;
+  }
+}
+
+.s-icon-btn:hover {
+  background-color: color.change($body-color, $alpha: .09);
+}
+
+.s-dialog {
+  //font-family: "Fira Code", Consolas, "Courier New", monospace;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background-color: color.change($body-color, $alpha: .15);
+  overflow: auto;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001 !important;
+
+  & > div {
+    min-width: 50%;
+    min-height: 40%;
+    background-color: var(--c-base);
+    border: 1px solid var(--c-text);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    max-width: 80%;
+    max-height: 90%;
+    overflow: hidden;
+  }
+
+  .s-dialog-content {
+    padding: 1rem;
+    flex-grow: 1
+
+  }
+
+  .s-dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+
+  }
+
+  .s-btn {
+    padding: 0.5rem;
+    background-color: transparent;
+    border-radius: 4px;
+    border: none;
+    color: var(--c-text);
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+
+  .s-btn:hover {
+    background-color: color.change($body-color, $alpha: .09);
+  }
+
+  .s-btn-primary {
+    background-color: var(--c-primary);
+    border-radius: 4px;
+    color: var(--c-light);
+  }
+
+  .s-btn-primary:hover {
+    background-color: var(--c-primary);
+    filter: brightness(85%);
+  }
+}
+
+
+
+.s-form-control {
+  background-color: tint-color($body-bg, 5%) !important;
+
+  &::placeholder {
+    color: color.adjust($body-color, $lightness: -15%);
+  }
+}
+
+.btn-primary {
+  --bs-btn-color: #{$light};
+  --bs-btn-hover-color: #{$light};
+  --bs-btn-active-color: #{$light};
+
+}
+
+.btn-text {
+  --bs-btn-bg: transparent;
+  --bs-btn-hover-bg: #{color.change($body-color, $alpha: .09)};
+  --bs-btn-active-border-color: #{color.adjust($body-secondary-bg, $lightness: -5%)};
+  --bs-btn-focus-shadow-rgb: 66, 70, 73;
+}
+
+.btn-secondary {
+  --bs-btn-bg: #{$body-secondary-bg};
+  --bs-btn-border-color: #{color.adjust($body-secondary-bg, $lightness: 5%)};
+  --bs-btn-hover-bg: #{color.adjust($body-secondary-bg, $lightness: 5%)};
+  --bs-btn-hover-border-color: #{color.adjust($body-secondary-bg, $lightness: 5%)};
+  --bs-btn-active-bg: #{color.adjust($body-secondary-bg, $lightness: 5%)};
+  --bs-btn-active-border-color: #{color.adjust($body-secondary-bg, $lightness: -5%)};
+}
+
+
+.s-btn-danger {
+  //color: tint-color($body-bg, 30%);
+
+  --bs-btn-hover-bg: #{$danger};
+  --bs-btn-active-border-color: #{$danger};
+  --bs-btn-hover-color: #{$light};
+  --bs-btn-active-color: #{$light};
+}

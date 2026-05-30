@@ -1,0 +1,31 @@
+{
+  "name": "GraphiQL Extended SHV",
+  "short_name": "graphiql-shv-extended",
+  "description": "Graphiql with support for server selection and auth",
+  "version": "0.1.1",
+  "manifest_version": 3,
+  "content_scripts": [
+  ],
+  "action": {
+    "default_icon": {
+      "32": "icon/icon32.png",
+      "512": "icon/icon512.png",
+      "128": "icon/icon128.png"
+    },
+    "default_title": "Open GraphiQL Extended"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "commands": {
+  },
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "permissions": [
+    "declarativeNetRequest",
+    "storage",
+    "tabs"
+  ]
+}
