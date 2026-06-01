@@ -1,0 +1,56 @@
+name: Build and Release Application
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers workflow only when pushing a tag starting with 'v' (e.g., v1.0.0)
+
+# Needed to grant GitHub Actions permission to create releases and upload assets
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24' # Specify your project's Node version
+          cache: 'yarn'      # Enforces caching for Yarn dependencies
+
+      - name: Sync package.json version with Git Tag
+        run: |
+          # Strips the 'v' prefix from the tag (e.g., v1.2.3 -> 1.2.3)
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "Updating package.json version to $VERSION"
+          # Inline Node execution keeps this fully compatible across Yarn v1 (Classic) and Berry (v2+)
+          node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json')); pkg.version = '$VERSION'; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
+
+      - name: Install dependencies
+        # --frozen-lockfile ensures it strictly installs from yarn.lock (similar to npm ci)
+        run: yarn install --frozen-lockfile
+
+      - name: Build application
+        run: yarn build:extension
+
+      - name: Zip build directory
+        # Adjust 'dist' to match your project's specific build output directory
+        run: |
+          zip -r graphiql-shv-exended-${{ github.ref_name }}.zip dist
+
+      - name: Create GitHub Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: graphiql-shv-exended-${{ github.ref_name }}.zip
+          name: Release ${{ github.ref_name }}
+          body: |
+            Automated release for version ${{ github.ref_name }}.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

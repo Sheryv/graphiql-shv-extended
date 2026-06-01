@@ -1,12 +1,18 @@
-import {GraphiQL} from 'graphiql';
+import {GraphiQL, HISTORY_PLUGIN} from 'graphiql';
 import 'graphiql/style.css';
 import {Fetcher} from '@graphiql/toolkit';
 import type {FetcherOpts, FetcherParams} from "@graphiql/toolkit/src/create-fetcher/types.ts";
 import {Server} from "../server.ts";
-import {STORE_SELECTED, STORE_SERVERS} from "../store.ts";
+import {STORE_SELECTED, STORE_SERVERS, STORE_SETTINGS, STORE_STATUS} from "../store.ts";
 import {useState} from "react";
 import ServerManagement from "./ServerManagement.tsx";
 import {getValidToken} from "../auth-token-manager.ts";
+import {ToolbarButton} from '@graphiql/react';
+
+import {explorerPlugin as createExplorerPlugin} from '@graphiql/plugin-explorer';
+import '@graphiql/plugin-explorer/style.css';
+import ExportResponseAs from "./ExportResponseAs.tsx";
+import ExtractEmbedJson from "./ExtractEmbedJson.tsx";
 
 
 function createFetcher(server: Server): Fetcher {
@@ -47,6 +53,9 @@ function createFetcher(server: Server): Fetcher {
 function App() {
     const server = STORE_SELECTED.asState()
     const list = STORE_SERVERS.asState()
+    const status = STORE_STATUS.asState()
+    const settings = STORE_SETTINGS.asState()
+
     let fetcher = createFetcher(server);
     let lastId: string | null = null
     STORE_SELECTED.subscribe(s => {
@@ -70,6 +79,14 @@ function App() {
         console.log(list[e.target.selectedIndex]);
         STORE_SELECTED.update(list[e.target.selectedIndex]);
     };
+    const explorerPlugin = createExplorerPlugin({
+        showAttribution: false,
+    });
+
+    const btn = (<ToolbarButton
+        onClick={() => console.log("clicked")}
+        label="Dropdown"
+    >^</ToolbarButton>)
 
     return (
         <div className="wrapper">
@@ -100,7 +117,27 @@ function App() {
             </div>
 
 
-            <GraphiQL fetcher={fetcher}/>
+            <GraphiQL fetcher={fetcher} plugins={[explorerPlugin, HISTORY_PLUGIN]}>
+                <GraphiQL.Footer>
+                    <div className="d-flex justify-content-between">
+                        {status.lastResponse ?
+                            (<div
+                                className={`d-flex align-items-center ${status.lastResponse.success ? 'text-success-emphasis' : 'text-danger-emphasis'}`}
+                                aria-label={status.lastResponse.timestampLocal}>
+                                {status.lastResponse.status}
+                            </div>)
+                            :
+                            (<div></div>)
+                        }
+                        <div className="d-flex">
+                            <ExtractEmbedJson/>
+                            <ExportResponseAs/>
+                        </div>
+                    </div>
+                </GraphiQL.Footer>
+
+
+            </GraphiQL>
         </div>
     );
 }

@@ -1,4 +1,4 @@
-import {Item} from "./item.ts";
+import {Item} from "./types.ts";
 
 export type OAuthFlowType = 'direct' | 'standard' | 'servicea';
 

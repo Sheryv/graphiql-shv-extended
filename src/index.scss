@@ -171,7 +171,12 @@ body {
   }
 }
 
-
+.s-dialog-large > div {
+  min-width: 70%;
+  min-height: 70%;
+  max-width: 95%;
+  max-height: 95%;
+}
 
 .s-form-control {
   background-color: tint-color($body-bg, 5%) !important;

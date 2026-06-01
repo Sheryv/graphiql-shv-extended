@@ -340,6 +340,13 @@
     react-compiler-runtime "19.1.0-rc.1"
     zustand "^5"
 
+"@graphiql/plugin-explorer@^5.1.2":
+  version "5.1.2"
+  resolved "https://registry.yarnpkg.com/@graphiql/plugin-explorer/-/plugin-explorer-5.1.2.tgz#5df7787dd70c754e4d6a71f8b40bb14705f52495"
+  integrity sha512-AJkNRZNa0l0n4DM7CpmqTVDm2AjjcsxSC+GjtGHCrL1TQjO1k7MOjwSxye5x6JG3OcWO70KfovrF2NQVvEzcpQ==
+  dependencies:
+    graphiql-explorer "^0.9.0"
+
 "@graphiql/plugin-history@^0.4.2":
   version "0.4.2"
   resolved "https://registry.npmjs.org/@graphiql/plugin-history/-/plugin-history-0.4.2.tgz"
@@ -1299,6 +1306,11 @@ glob-parent@~5.1.2:
   integrity sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==
   dependencies:
     is-glob "^4.0.1"
+
+graphiql-explorer@^0.9.0:
+  version "0.9.0"
+  resolved "https://registry.yarnpkg.com/graphiql-explorer/-/graphiql-explorer-0.9.0.tgz#25f6b990bfc3e04e88c0cf419e28d12abe2c4fbe"
+  integrity sha512-fZC/wsuatqiQDO2otchxriFO0LaWIo/ovF/CQJ1yOudmY0P7pzDiP+l9CEHUiWbizk3e99x6DQG4XG1VxA+d6A==
 
 graphiql@^5.2.2:
   version "5.2.3"
