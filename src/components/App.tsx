@@ -1,92 +1,51 @@
 import {GraphiQL, HISTORY_PLUGIN} from 'graphiql';
 import 'graphiql/style.css';
-import {Fetcher} from '@graphiql/toolkit';
-import type {FetcherOpts, FetcherParams} from "@graphiql/toolkit/src/create-fetcher/types.ts";
-import {Server} from "../server.ts";
-import {STORE_SELECTED, STORE_SERVERS, STORE_SETTINGS, STORE_STATUS} from "../store.ts";
+import {STORE_SELECTED, STORE_SERVERS, STORE_STATUS} from "../store.ts";
 import {useState} from "react";
 import ServerManagement from "./ServerManagement.tsx";
-import {getValidToken} from "../auth-token-manager.ts";
-import {ToolbarButton} from '@graphiql/react';
-
 import {explorerPlugin as createExplorerPlugin} from '@graphiql/plugin-explorer';
 import '@graphiql/plugin-explorer/style.css';
 import ExportResponseAs from "./ExportResponseAs.tsx";
 import ExtractEmbedJson from "./ExtractEmbedJson.tsx";
+import createFetcher from "../fetcher.ts";
 
 
-function createFetcher(server: Server): Fetcher {
-    return async (graphQLParams: FetcherParams, fetcherOpts?: FetcherOpts) => {
-        const headers = {
-            Accept: 'application/graphql-response+json, application/json;q=0.9',
-            'Content-Type': 'application/json',
+let lastId: string | null = null
+STORE_SELECTED.subscribe(s => {
+    if (lastId && lastId == s.id) {
 
-        } as Record<string, string>;
-
-        for (let header of server.headers) {
-            headers[header.name] = header.value;
-        }
-
-        if (server.oauth) {
-            try {
-                const token = await getValidToken(server);
-                if (token) {
-                    headers['Authorization'] = `Bearer ${token}`;
-                }
-            } catch (error) {
-                console.error("OAuth authentication error:", error);
-                // Depending on requirements, you might want to throw or fallback silently
-                throw error;
-            }
-        }
-
-        const response = await fetch(server.url, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(graphQLParams),
-        });
-        return response.json();
+    } else {
+        console.log('server changed to ', s);
+        STORE_STATUS.getSnapshot().fetcher = createFetcher(s)
+        lastId = s.id
     }
-}
+});
+STORE_SERVERS.subscribe(s => {
+    const selected = STORE_SELECTED.getSnapshot();
+    STORE_STATUS.getSnapshot().fetcher = createFetcher(selected)
+    lastId = selected.id
+});
+
+const explorerPlugin = createExplorerPlugin({
+    showAttribution: false,
+});
 
 
 function App() {
+    const [dialog, setDialog] = useState(false);
+
     const server = STORE_SELECTED.asState()
     const list = STORE_SERVERS.asState()
     const status = STORE_STATUS.asState()
-    const settings = STORE_SETTINGS.asState()
 
-    let fetcher = createFetcher(server);
-    let lastId: string | null = null
-    STORE_SELECTED.subscribe(s => {
-        if (lastId && lastId == s.id) {
-
-        } else {
-            console.log('server changed to ', s);
-
-            fetcher = createFetcher(s)
-            lastId = s.id
-        }
-    });
-    STORE_SERVERS.subscribe(s => {
-        fetcher = createFetcher(server)
-        lastId = server.id
-    });
-
-    const [dialog, setDialog] = useState(false);
+    if (!status.fetcher) {
+        status.fetcher = createFetcher(server)
+    }
 
     const optionchanged = (e: any) => {
         console.log(list[e.target.selectedIndex]);
-        STORE_SELECTED.update(list[e.target.selectedIndex]);
+        STORE_SELECTED.set(list[e.target.selectedIndex]);
     };
-    const explorerPlugin = createExplorerPlugin({
-        showAttribution: false,
-    });
-
-    const btn = (<ToolbarButton
-        onClick={() => console.log("clicked")}
-        label="Dropdown"
-    >^</ToolbarButton>)
 
     return (
         <div className="wrapper">
@@ -117,14 +76,14 @@ function App() {
             </div>
 
 
-            <GraphiQL fetcher={fetcher} plugins={[explorerPlugin, HISTORY_PLUGIN]}>
+            <GraphiQL fetcher={status.fetcher} plugins={[explorerPlugin, HISTORY_PLUGIN]}>
                 <GraphiQL.Footer>
                     <div className="d-flex justify-content-between">
                         {status.lastResponse ?
                             (<div
-                                className={`d-flex align-items-center ${status.lastResponse.success ? 'text-success-emphasis' : 'text-danger-emphasis'}`}
-                                aria-label={status.lastResponse.timestampLocal}>
-                                {status.lastResponse.status}
+                                className={`d-flex font-monospace align-items-center ${status.lastResponse.success ? 'text-success-emphasis' : 'text-danger-emphasis'}`}
+                                title={status.lastResponse.timestampLocal}>
+                                {status.lastResponse.status}, {status.lastResponse.duration} ms, {status.lastResponse.length && (status.lastResponse.length + ' B') || ''}
                             </div>)
                             :
                             (<div></div>)

@@ -1,30 +1,52 @@
 import React, {useEffect, useState} from "react";
 import {debounce, ToolbarButton} from "@graphiql/react";
 import {STORE_SETTINGS, STORE_STATUS} from "../store.ts";
-import {extractEmbedJson} from "../tools.ts";
+import {extractEmbedJson, handleFileDownload} from "../tools.ts";
+import CodeViewer from "./CodeViewer.tsx";
 
 
 export interface ExtractEmbedJsonProps {
 
 }
 
-const pathUpdater = debounce(500, (path: string, setExtracted: Function) => {
+const pathUpdater = debounce(500, (path: string, callback: (text: string, error?: string) => void) => {
     const s = STORE_SETTINGS.getSnapshot();
     s.extractEmbedJsonPath = path;
-    STORE_SETTINGS.update(s);
+    STORE_SETTINGS.set(s);
 
-    setExtracted(extractEmbedJson(STORE_STATUS.getSnapshot(), s))
+    let [result, error] = extractEmbedJson(STORE_STATUS.getSnapshot(), s);
+    callback(result || '', error || undefined)
 })
 
 export default function ExtractEmbedJson(props: ExtractEmbedJsonProps) {
     const [open, setOpen] = useState(false);
     const [jsonPath, setJsonPath] = useState(STORE_SETTINGS.getSnapshot().extractEmbedJsonPath)
-    const status = STORE_STATUS.asState()
-    const [extracted, setExtracted] = useState(extractEmbedJson(status, STORE_SETTINGS.getSnapshot()))
+    const [extracted, setExtracted] = useState('')
+    const [error, setError] = useState('')
+
+    const callback = (text: string, error?: string) => {
+        setExtracted(text)
+        setError(error ?? '')
+    }
+
+    const copy = (e: any) => {
+        navigator.clipboard.writeText(extracted).then(() => {
+        });
+    }
 
     useEffect(() => {
-        pathUpdater(jsonPath, setExtracted)
-    }, [jsonPath]);
+        if (open) {
+            pathUpdater(jsonPath, callback)
+        } else {
+            setExtracted('')
+        }
+    }, [jsonPath, open]);
+
+    const handleDownload = () => {
+        const prefix = STORE_STATUS.getSnapshot().lastResponse?.operationName && STORE_STATUS.getSnapshot().lastResponse?.operationName + '_' || ''
+        let time = new Date().toLocaleTimeString().replaceAll(':', '-').replaceAll(' ', '');
+        handleFileDownload(extracted, 'embedded_' + prefix + jsonPath.replaceAll(/\W+/g, '-') + '_' + time + '.json', 'appliction/json');
+    };
 
     return (
         <div>
@@ -53,33 +75,45 @@ export default function ExtractEmbedJson(props: ExtractEmbedJsonProps) {
 
 
                         <div className="d-flex flex-grow-1 border-top overflow-hidden gap-3 flex-column p-3">
-
+                            <div className="small">
+                                This panel allows converting string values that are embedded JSON objects to array of that objects after deserialization
+                            </div>
                             <div>
-                                <label className="form-label mb-1">JSON Path to field containing embedded JSON</label>
+                                <label className="form-label mb-1">JSON Path to field containing embedded JSON. Wildcard char
+                                    '*' is supported and it matches any character (e.g.:
+                                    data.edges; data.*.edges)</label>
                                 <input type="text" value={jsonPath} onChange={e => setJsonPath(e.target.value)} required
-                                       className={"form-control s-form-control "}/>
+                                       className={"form-control s-form-control font-monospace"}/>
                             </div>
 
-                            <div className="flex-grow-1">
-                                <label className="form-label mb-1 d-flex justify-content-between"><span
-                                    className="align-self-end">Converted JSON result</span>
-                                    <button className="btn btn-text">
+                            <div className="flex-grow-1 d-flex flex-column">
+                                <div className=" mb-1 d-flex justify-content-between">
+                                    <label className="form-label align-self-end">Converted JSON result</label>
+                                    <button className="btn btn-text" onClick={copy}>
                                         Copy to clipboard
                                     </button>
-                                </label>
-                                <textarea value={extracted} className="flex-grow-1 form-control s-form-control h-100"
-                                          readOnly={true}>
+                                </div>
+                                <div className="flex-grow-1 overflow-hidden s-code-viewer">
+                                    <CodeViewer content={extracted} language="json" height="60vh"></CodeViewer>
+                                </div>
 
-                            </textarea>
+                                {/*    <textarea value={extracted} className="flex-grow-1 form-control s-form-control h-100 font-monospace"*/}
+                                {/*              readOnly={true}>*/}
+
+                                {/*</textarea>*/}
                             </div>
                         </div>
 
 
-                        <div className="p-3 d-flex border-top justify-content-end align-items-center gap-3">
-                            <button className="btn btn-text" onClick={e => setOpen(false)}>Cancel</button>
-                            <button className="btn btn-primary" onClick={e => {
-                            }}>Save to file
-                            </button>
+                        <div className="p-3 d-flex border-top justify-content-between align-items-center gap-3">
+                            <div className="d-flex align-items-center text-danger-emphasis">
+                                {error && 'Processing problem: ' + error || ''}
+                            </div>
+                            <div className="d-flex gap-3">
+                                <button className="btn btn-text" onClick={e => setOpen(false)}>Cancel</button>
+                                <button className="btn btn-primary" onClick={e => handleDownload()}>Save to file
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

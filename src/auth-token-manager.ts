@@ -10,7 +10,7 @@ interface TokenStorage {
 function isTokenExpired(tokenData: TokenStorage | null): boolean {
     if (!tokenData || !tokenData.accessToken) return true;
 
-    const buffer = 10000; // 10-second buffer
+    const buffer = 15000;
 
     // 1. Primary Check: Use the stored timestamp (Fast)
     if (tokenData.expiresAt) {
@@ -32,7 +32,7 @@ export async function getValidToken(server: Server): Promise<string | null> {
     const oauth = server.oauth;
     if (!oauth) return null;
 
-    const storageKey = `token_${server.id}`;
+    const storageKey = `graphiql-extended:token_${server.id}`;
     const storedDataStr = localStorage.getItem(storageKey);
     let tokenData: TokenStorage | null = storedDataStr ? JSON.parse(storedDataStr) : null;
 

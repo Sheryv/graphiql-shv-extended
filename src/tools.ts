@@ -5,65 +5,111 @@ export function isObject(item: Object) {
     return (item && typeof item === 'object' && !Array.isArray(item));
 }
 
-export default function mergeDeep<T extends Indexable>(target: T, source: Indexable): T {
-    let output: T = Object.assign({}, target);
+export default function mergeDeep<T extends Indexable>(target: T, source: T): T {
     if (isObject(target) && isObject(source)) {
         Object.keys(source).forEach(key => {
             if (isObject(source[key])) {
                 if (!(key in target))
-                    Object.assign(output, {[key]: source[key]});
+                    Object.assign(target, {[key]: source[key]});
                 else {
                     // @ts-ignore
                     output[key] = mergeDeep(target[key], source[key]);
                 }
             } else {
-                Object.assign(output, {[key]: source[key]});
+                Object.assign(target, {[key]: source[key]});
             }
         });
     }
-    return output;
+    return target;
 }
 
-export function exportResponseAsCsv(state: State, settings: Settings): string {
-    if (!state.lastResponse?.body || !settings.csvExportArrayPath) {
-        return '';
+export function exportResponseAsCsv(state: State, settings: Settings): [string | null, string | null] {
+    if (!state.lastResponse || !state.lastResponse.body) {
+        return [null, "Empty response body; Execute some request"]
+
+    }
+    if (!settings.csvExportArrayPath) {
+        return [null, "JSON array path is empty"]
+    }
+
+    if ((state.lastResponse && !state.lastResponse.success)) {
+        return [null, "Last request failed"]
     }
 
     function anyToString(obj: any): string {
         if (Array.isArray(obj) || isObject(obj)) {
-            JSON.stringify(obj);
+            return JSON.stringify(obj);
+        }
+        if (obj == null) {
+            return '?'
         }
         return '' + obj;
     }
 
+    try {
+        const resp = typeof state.lastResponse.body == 'string' ? JSON.parse(state.lastResponse.body) : state.lastResponse.body;
 
-    const resp = JSON.parse(state.lastResponse?.body)
+        const records = getByPath(resp, settings.csvExportArrayPath)
+        if (!Array.isArray(records)) {
+            return [null, `Object pointed by path '${settings.csvExportArrayPath}' is not array`]
+        }
+        if (records.length == 0) {
+            return ['', 'No records found in response body'];
+        }
 
-    const records = getByPath(resp, settings.csvExportArrayPath)
-    if (Array.isArray(records)) {
-        throw new Error("Provided array path is incorrect")
+        const fields = (settings.csvExportFields?.length ?? 0) > 0 ? settings.csvExportFields : Object.keys(records[0]);
+        const rows = records
+            .map((record: any) => {
+                return fields.map(field => {
+                    return getByPath(record, field);
+                });
+            })
+            .map((cells: any[]) => cells.map(anyToString).join(';'))
+        let header = fields.map(f => f.replaceAll(/[.\s-]+/g, '_')).join(';');
+        rows.unshift(header);
+        return [rows.join("\n"), null];
+    } catch (e) {
+        console.error(e);
+        return [null, "Details: " + e]
     }
-    const rows = records
-        .map((record: any) => {
-            const fields = settings.csvExportFields ?? Object.keys(record)
-            return fields.map(field => {
-                return getByPath(record, field);
-            });
-        })
-        .map((cells: any[]) => cells.map(anyToString).join(';'))
-    return rows.join("\n");
 }
 
-export function extractEmbedJson(state: State, settings: Settings): any {
-    if (!state.lastResponse?.body) {
-        return undefined;
+export function extractEmbedJson(state: State, settings: Settings): [string | null, string | null] {
+    if (!state.lastResponse || !state.lastResponse.body) {
+        return [null, "Empty response body; Execute some request"];
     }
 
-    const resp = JSON.parse(state.lastResponse?.body)
+    if (!settings.extractEmbedJsonPath) {
+        return [null, "JSON path to embedded field is empty"]
+    }
+
+
+    const resp = typeof state.lastResponse.body == 'string' ? JSON.parse(state.lastResponse.body) : state.lastResponse.body;
     const extracted = getByPath(resp, settings.extractEmbedJsonPath)
-    return JSON.stringify(extracted);
+    let result = extracted;
+    if (Array.isArray(extracted)) {
+        result = extracted.filter(s => !!s).map(e => JSON.parse(e));
+    }
+
+    return [JSON.stringify(result, null, 2), null];
 }
 
+
+export function handleFileDownload(content: string, filename: string, type: string) {
+    const blob = new Blob([content], {type: `${type};charset=utf-8`});
+
+    const blobUrl = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(blobUrl);
+};
 
 function getByPath(obj: Indexable, path: string): any {
     if (!path) return obj;
@@ -72,16 +118,31 @@ function getByPath(obj: Indexable, path: string): any {
     path = path.replace(/^\./, ''); // strip a leading dot
     const keys = path.split('.');
 
-    return keys.reduce((current, key) => {
-        // If the current accumulation is null or undefined, stop traversing
-        if (current == null) return undefined;
-
-        // If we encounter an array, map over each item to extract the key
-        if (Array.isArray(current)) {
-            return current.map(item => (item != null ? item[key] : undefined));
+    const matchingValues = (key: string | RegExp, obj: any) => {
+        if (typeof key === 'string') {
+            return obj[key];
         }
+        return Object.keys(obj).filter(k => key.test(k)).map(k => obj[k])[0];
+    };
 
-        // Otherwise, access the property normally
-        return current[key];
-    }, obj);
+
+    return keys
+        .map(k => {
+            if (k.includes('*')) {
+                return new RegExp(k.replaceAll('*', '.*'));
+            }
+            return k;
+        })
+        .reduce((current, key) => {
+            // If the current accumulation is null or undefined, stop traversing
+            if (current == null) return undefined;
+
+            // If we encounter an array, map over each item to extract the key
+            if (Array.isArray(current)) {
+                return current.flatMap(item => (item != null ? matchingValues(key, item) : undefined));
+            }
+
+            // Otherwise, access the property normally
+            return matchingValues(key, current);
+        }, obj);
 }

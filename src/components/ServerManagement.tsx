@@ -1,5 +1,5 @@
-import React, {useEffect, useState} from 'react';
-import {OAuth, OAuthFlowType, Server} from '../server.ts'; // Adjust path
+import React, {useEffect, useRef, useState} from 'react';
+import {AUTH_TYPES, OAuth, OAuthFlowType, Server} from '../server.ts'; // Adjust path
 import {STORE_SERVERS} from "../store.ts";
 import './ServerManagement.scss';
 
@@ -16,6 +16,7 @@ interface ServerManagementProps {
 export default function ServerManagement({dialog}: ServerManagementProps) {
     // Connect to your global store using standard signature
     const servers: Server[] = STORE_SERVERS.asState();
+    const formRef = useRef<HTMLFormElement>(null);
 
     // UI Navigation Trackers
     const [selectedIndex, setSelectedIndex] = useState<number>(0);
@@ -142,7 +143,12 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
     };
 
     // Convert states back to instantiated typed constructs
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = (e: any) => {
+        // document.getElementById('submit-server-form')?.click();
+
+        formRef.current?.reportValidity();
+
+        // e.preventDefault();
         const processedHeaders: Record<string, string>[] = headers
             .filter(h => h.key.trim() !== '')
             .map(h => ({[h.key]: h.value}));
@@ -161,10 +167,8 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
             )
             : undefined;
 
-        if (!error) {
+        if (!error && (!hasOAuth || (!!clientId && !!realm))) {
             const updatedServer = new Server(name, url, processedHeaders, processedOAuth, servers[selectedIndex].id);
-
-            console.log('Mapped Class Instance Built:', updatedServer);
 
             STORE_SERVERS.updateItem(updatedServer);
             dialog && dialog(false);
@@ -232,17 +236,16 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
                             )}
                         </div>
                     ) : (
-                        <form className="d-flex flex-column gap-3">
-
+                        <form ref={formRef} className="d-flex flex-column gap-3">
                             <div>
-                                <label className="form-label small mb-1">Server name</label>
+                                <label className="form-label  mb-1">Server name</label>
                                 <input type="text" value={name} onChange={e => setName(e.target.value)} required
                                        className={"form-control s-form-control " + (error ? 'invalid' : '')}/>
                                 {error && (<div className="invalid-feedback">{error}</div>)}
                             </div>
 
                             <div>
-                                <label className="form-label small  mb-1">Server URL</label>
+                                <label className="form-label   mb-1">Server URL</label>
                                 <input type="url" value={url} onChange={e => setUrl(e.target.value)} required
                                        className="form-control s-form-control"/>
                             </div>
@@ -252,7 +255,7 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <h6 className="m-0 text-white font-medium">HTTP header modifications</h6>
                                     <button type="button" onClick={addHeader} className="btn btn-sm btn-secondary">
-                                        + Add header key
+                                        + Add header
                                     </button>
                                 </div>
 
@@ -299,16 +302,26 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
                             {/* Contextual Nested OAuth Area */}
                             {hasOAuth && (
                                 <div className="rounded d-flex flex-column gap-3">
+                                    <div className="">
+                                        <label className="form-label mb-1">Type</label>
+                                        <select className="form-control s-form-control"
+                                                onChange={e => setFlowType(AUTH_TYPES[e.target.selectedIndex].key)}
+                                                value={flowType}>
+                                            {AUTH_TYPES.map((s) => (
+                                                <option key={s.key} value={s.key}>{s.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
                                     <div className="row g-2">
                                         <div className="col-6">
-                                            <label className="form-label small  mb-1">Client ID
-                                                *</label>
+                                            <label className="form-label   mb-1">Client ID *</label>
                                             <input type="text" value={clientId}
                                                    onChange={e => setClientId(e.target.value)}
                                                    required className="form-control s-form-control"/>
                                         </div>
                                         <div className="col-6">
-                                            <label className="form-label small  mb-1">Realm
+                                            <label className="form-label   mb-1">Realm
                                                 *</label>
                                             <input type="text" value={realm} onChange={e => setRealm(e.target.value)}
                                                    required className="form-control s-form-control"/>
@@ -316,38 +329,48 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
                                     </div>
 
                                     <div>
-                                        <label className="form-label small  mb-1">Token URL overwrite
-                                            (Optional)</label>
+                                        <label className="form-label   mb-1">Token URL overwrite (Optional)</label>
                                         <input type="text" value={tokenUrl}
                                                onChange={e => setTokenUrl(e.target.value)}
                                                className="form-control s-form-control"
                                                placeholder={placeholderForOverwrite}/>
                                     </div>
 
-                                    <div>
-                                        <label className="form-label small  mb-1">Client secret
-                                            (Optional)</label>
-                                        <input type="password" value={clientSecret}
-                                               onChange={e => setClientSecret(e.target.value)}
-                                               className="form-control s-form-control"/>
-                                    </div>
+                                    {flowType == 'standard' && (
+                                        <div>
+                                            <label className="form-label   mb-1">Redirect URL overwrite
+                                                (Optional)</label>
+                                            <input type="text" value={redirectUrl}
+                                                   onChange={e => setRedirectUrl(e.target.value)}
+                                                   className="form-control s-form-control"/>
+                                        </div>
+                                    )}
 
-                                    <div className="row g-2">
-                                        <div className="col-6">
-                                            <label className="form-label small  mb-1">Username
-                                                (Optional)</label>
-                                            <input type="text" value={username}
-                                                   onChange={e => setUsername(e.target.value)}
+                                    {flowType == 'servicea' && (
+                                        <div>
+                                            <label className="form-label   mb-1">Client secret (Optional)</label>
+                                            <input type="password" value={clientSecret} autoComplete="secret"
+                                                   onChange={e => setClientSecret(e.target.value)}
                                                    className="form-control s-form-control"/>
                                         </div>
-                                        <div className="col-6">
-                                            <label className="form-label small  mb-1">Password
-                                                (Optional)</label>
-                                            <input type="password" value={password}
-                                                   onChange={e => setPassword(e.target.value)}
-                                                   className="form-control s-form-control"/>
+                                    )}
+
+                                    {flowType == 'direct' && (
+                                        <div className="row g-2">
+                                            <div className="col-6">
+                                                <label className="form-label   mb-1">Username (Optional)</label>
+                                                <input type="text" value={username} autoComplete="username"
+                                                       onChange={e => setUsername(e.target.value)}
+                                                       className="form-control s-form-control"/>
+                                            </div>
+                                            <div className="col-6">
+                                                <label className="form-label   mb-1">Password (Optional)</label>
+                                                <input type="password" value={password} autoComplete="password"
+                                                       onChange={e => setPassword(e.target.value)}
+                                                       className="form-control s-form-control"/>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
                         </form>
@@ -358,7 +381,7 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
 
             <div className="p-3 d-flex border-top justify-content-end align-items-center gap-3">
                 <button className="btn btn-text" onClick={e => dialog && dialog(false)}>Cancel</button>
-                <button className="btn btn-primary" onClick={handleSave}>Save</button>
+                <button className="btn btn-primary" onClick={e => handleSave(e)}>Save</button>
             </div>
         </div>
     );

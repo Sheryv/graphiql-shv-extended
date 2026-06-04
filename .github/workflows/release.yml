@@ -41,7 +41,7 @@ jobs:
       - name: Zip build directory
         # Adjust 'dist' to match your project's specific build output directory
         run: |
-          zip -r graphiql-shv-exended-${{ github.ref_name }}.zip dist
+          zip -r graphiql-shv-exended-${{ github.ref_name }}.zip dist/*
 
       - name: Create GitHub Release and Upload Asset
         uses: softprops/action-gh-release@v2

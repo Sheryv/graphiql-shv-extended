@@ -1,24 +1,26 @@
 import React, {useEffect, useState} from "react";
 import {debounce, ToolbarButton} from "@graphiql/react";
 import {STORE_SETTINGS, STORE_STATUS} from "../store.ts";
-import {exportResponseAsCsv} from "../tools.ts";
+import {exportResponseAsCsv, handleFileDownload} from "../tools.ts";
 
 
 export interface ExportResponseAsProps {
 
 }
 
-const arrayPathUpdater = debounce(500, (path: string, setCsv: Function) => {
+const arrayPathUpdater = debounce(500, (path: string, callback: (csv: string, error?: string) => void) => {
     const s = STORE_SETTINGS.getSnapshot();
     s.csvExportArrayPath = path;
-    STORE_SETTINGS.update(s);
-    setCsv(exportResponseAsCsv(STORE_STATUS.getSnapshot(), s))
+    STORE_SETTINGS.set(s);
+    let [csv, error] = exportResponseAsCsv(STORE_STATUS.getSnapshot(), s);
+    callback(csv || '', error || undefined)
 })
-const fieldPathsUpdater = debounce(500, (path: string, setCsv: Function) => {
+const fieldPathsUpdater = debounce(500, (path: string, callback: (csv: string, error?: string) => void) => {
     const s = STORE_SETTINGS.getSnapshot();
-    s.csvExportFields = path.split('.').map(l => l.trim()).filter(l => l !== '');
-    STORE_SETTINGS.update(s);
-    setCsv(exportResponseAsCsv(STORE_STATUS.getSnapshot(), s))
+    s.csvExportFields = path.split(',').map(l => l.trim()).filter(l => l !== '');
+    STORE_SETTINGS.set(s);
+    let [csv, error] = exportResponseAsCsv(STORE_STATUS.getSnapshot(), s);
+    callback(csv || '', error || undefined)
 })
 
 export default function ExportResponseAs(props: ExportResponseAsProps) {
@@ -26,16 +28,37 @@ export default function ExportResponseAs(props: ExportResponseAsProps) {
 
     const [jsonArrayPath, setJsonArrayPath] = useState(STORE_SETTINGS.getSnapshot().csvExportArrayPath)
     const [jsonFieldPaths, setFieldPaths] = useState(STORE_SETTINGS.getSnapshot().csvExportFields.join(',\n'))
-    const status = STORE_STATUS.asState()
-    const [csv, setCsv] = useState(exportResponseAsCsv(status, STORE_SETTINGS.getSnapshot()))
+    const [csv, setCsv] = useState('')
+    const [error, setError] = useState('')
+
+    const callback = (csv: string, error?: string) => {
+        setCsv(csv)
+        setError(error ?? '')
+    }
+
+    const copy = (e: any) => {
+        navigator.clipboard.writeText(csv).then(() => console.log('Text copied'))
+    }
 
     useEffect(() => {
-        arrayPathUpdater(jsonArrayPath, setCsv);
-    }, [jsonArrayPath]);
+        if (open) {
+            arrayPathUpdater(jsonArrayPath, callback);
+        } else {
+            setCsv('')
+        }
+    }, [jsonArrayPath, open]);
 
     useEffect(() => {
-        fieldPathsUpdater(jsonFieldPaths, setCsv);
-    }, [jsonFieldPaths]);
+        if (open) {
+            fieldPathsUpdater(jsonFieldPaths, callback);
+        }
+    }, [jsonFieldPaths, open]);
+
+    const handleDownload = () => {
+        const prefix = STORE_STATUS.getSnapshot().lastResponse?.operationName && STORE_STATUS.getSnapshot().lastResponse?.operationName + '_' || ''
+        let time = new Date().toLocaleTimeString().replaceAll(':', '-').replaceAll(' ', '');
+        handleFileDownload(csv, prefix + jsonArrayPath.replaceAll(/\W+/g, '-') + '_' + time + '.csv', 'text/csv');
+    };
 
     return (
         <div>
@@ -64,39 +87,49 @@ export default function ExportResponseAs(props: ExportResponseAsProps) {
 
 
                         <div className="d-flex flex-grow-1 border-top overflow-hidden gap-3 flex-column p-3">
-
+                            <div className="small">
+                                This panel allows converting JSON array from response body to CSV table
+                            </div>
                             <div>
-                                <label className="form-label mb-1">JSON Path to field containing array</label>
+                                <label className="form-label mb-1">JSON Path to field containing array. Wildcard char
+                                    '*' is supported and it matches any character (e.g.:
+                                    data.edges; data.*.edges)</label>
                                 <input type="text" value={jsonArrayPath}
                                        onChange={e => setJsonArrayPath(e.target.value)} required
-                                       className={"form-control s-form-control "}/>
+                                       className={"form-control s-form-control font-monospace"}/>
                             </div>
                             <div>
                                 <label className="form-label mb-1">List of comma-separated JSON Paths for each column
-                                    relative to array object defined above</label>
-                                <textarea value={jsonFieldPaths} className="form-control s-form-control" rows={10}
+                                    relative to array object defined above (e.g.: node.id, node.name)</label>
+                                <textarea value={jsonFieldPaths} className="form-control s-form-control font-monospace"
+                                          rows={10}
                                           onChange={e => setFieldPaths(e.target.value)}/>
                             </div>
 
-                            <div className="flex-grow-1">
-                                <label className="form-label mb-1 d-flex justify-content-between"><span
-                                    className="align-self-end">Converted JSON result</span>
-                                    <button className="btn btn-text">
+                            <div className="flex-grow-1 d-flex flex-column">
+                                <div className=" mb-1 d-flex justify-content-between">
+                                    <label className="form-label align-self-end">Converted JSON result</label>
+                                    <button className="btn btn-text" onClick={copy}>
                                         Copy to clipboard
                                     </button>
-                                </label>
-                                <textarea value={csv} className="flex-grow-1 form-control s-form-control h-100"
+                                </div>
+                                <textarea value={csv}
+                                          className="flex-grow-1 form-control s-form-control h-100 font-monospace"
                                           readOnly={true}/>
 
                             </div>
                         </div>
 
 
-                        <div className="p-3 d-flex border-top justify-content-end align-items-center gap-3">
-                            <button className="btn btn-text" onClick={e => setOpen(false)}>Cancel</button>
-                            <button className="btn btn-primary" onClick={e => {
-                            }}>Save to file
-                            </button>
+                        <div className="p-3 d-flex border-top justify-content-between align-items-center gap-3">
+                            <div className="d-flex align-items-center text-danger-emphasis">
+                                {error && 'Processing problem: ' + error || ''}
+                            </div>
+                            <div className="d-flex gap-3">
+                                <button className="btn btn-text" onClick={e => setOpen(false)}>Cancel</button>
+                                <button className="btn btn-primary" onClick={e => handleDownload()}>Save to file
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

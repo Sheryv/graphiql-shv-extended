@@ -3,7 +3,7 @@ import {useSyncExternalStore} from "react";
 import {Indexable, Item, Settings, SETTINGS_DEFAULT, State} from "./types.ts";
 import mergeDeep from "./tools.ts";
 
-class Store<T> {
+class Store<T extends Indexable> {
 
     public data: T
 
@@ -11,13 +11,14 @@ class Store<T> {
         const init = JSON.parse(JSON.stringify(initialData));
         if (!saveToDisk) {
             this.data = init;
-        }
-
-        const item = localStorage.getItem(this.id);
-        if (item) {
-            this.data = mergeDeep(init, JSON.parse(item));
         } else {
-            this.data = init;
+            const item = localStorage.getItem(this.id);
+            if (item) {
+                let res = this.mergeDataFromDisk(JSON.parse(item), init);
+                this.data = res;
+            } else {
+                this.data = init;
+            }
         }
     }
 
@@ -25,8 +26,18 @@ class Store<T> {
         return useSyncExternalStore(this.subscribe.bind(this), this.getSnapshot.bind(this))
     }
 
-    update(data: T) {
+    set(data: T) {
         this.data = data;
+        this.emitChange()
+    }
+
+    setSome(data: Partial<T>) {
+        this.data = Object.assign(Object.assign({}, this.data), data);
+        this.emitChange()
+    }
+
+    update(fn: (data: T) => T) {
+        this.data = fn(this.data);
         this.emitChange()
     }
 
@@ -50,6 +61,10 @@ class Store<T> {
             listener(d);
         }
     }
+
+    protected mergeDataFromDisk(data: T, initialData: T): T {
+        return mergeDeep(initialData, data);
+    }
 }
 
 
@@ -60,24 +75,34 @@ class ArrayStore<A extends Item> extends Store<Array<A>> {
         const index = copy.findIndex(d => d.id == data.id);
         if (index !== -1) {
             copy[index] = data;
-            this.update(copy);
+            this.set(copy);
         } else {
             this.addItem(data);
         }
     }
 
     addItem(data: A) {
-        this.update([...this.data, data]);
+        this.set([...this.data, data]);
     }
 
     removeItem(data: A) {
-        this.update([...this.data.filter(s => s.id != data.id)]);
+        this.set([...this.data.filter(s => s.id != data.id)]);
     }
 
     removeItemAt(index: number) {
         const copy = [...this.data];
         copy.splice(index, 1);
-        this.update(copy);
+        this.set(copy);
+    }
+
+    protected mergeDataFromDisk(data: Array<A>, initialData: Array<A>): Array<A> {
+        for (let i = 0; i < data.length; i++) {
+            const found = initialData.find(e => e.id == data[i].id)
+            if (found) {
+                data[i] = mergeDeep(found, data[i]);
+            }
+        }
+        return data;
     }
 }
 

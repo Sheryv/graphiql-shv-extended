@@ -2,6 +2,12 @@ import {Item} from "./types.ts";
 
 export type OAuthFlowType = 'direct' | 'standard' | 'servicea';
 
+export const AUTH_TYPES: { key: OAuthFlowType, name: string }[] = [
+    {key: 'standard', name: 'Standard flow via GUI'},
+    {key: 'direct', name: 'Direct access'},
+    {key: 'servicea', name: 'Service account'}
+];
+
 export class OAuth {
     constructor(public clientId: string,
                 public realm: string,
@@ -20,7 +26,7 @@ export class OAuth {
 
     // Computes the Keycloak login page URL for standard flow
     buildAuthUrl(baseUrl: string) {
-        const base = this.authViaUIUrl ??  this.tokenUrl?.replace(/\/token$/, '/auth') ?? baseUrl.replace(/\/graphql$/, '') + `/auth/realms/${this.realm}/protocol/openid-connect/auth`;
+        const base = this.authViaUIUrl ?? this.tokenUrl?.replace(/\/token$/, '/auth') ?? baseUrl.replace(/\/graphql$/, '') + `/auth/realms/${this.realm}/protocol/openid-connect/auth`;
         const params = new URLSearchParams({
             client_id: this.clientId,
             redirect_uri: this.redirectUri || window.location.origin,
