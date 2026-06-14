@@ -10,21 +10,20 @@ import ExtractEmbedJson from "./ExtractEmbedJson.tsx";
 import createFetcher from "../fetcher.ts";
 
 
-let lastId: string | null = null
+let lastId: number | null = null
 STORE_SELECTED.subscribe(s => {
-    if (lastId && lastId == s.id) {
+    if (lastId != null && lastId === s) {
 
     } else {
-        console.log('server changed to ', s);
-        STORE_STATUS.getSnapshot().fetcher = createFetcher(s)
-        lastId = s.id
+        console.debug('Server changed to ', s, STORE_SERVERS.getSnapshot()[s] );
+        lastId = s
     }
 });
-STORE_SERVERS.subscribe(s => {
-    const selected = STORE_SELECTED.getSnapshot();
-    STORE_STATUS.getSnapshot().fetcher = createFetcher(selected)
-    lastId = selected.id
-});
+// STORE_SERVERS.subscribe(s => {
+//     const selected = STORE_SELECTED.getSnapshot();
+//     STORE_STATUS.getSnapshot().fetcher = createFetcher(selected)
+//     lastId = selected.id
+// });
 
 const explorerPlugin = createExplorerPlugin({
     showAttribution: false,
@@ -34,26 +33,27 @@ const explorerPlugin = createExplorerPlugin({
 function App() {
     const [dialog, setDialog] = useState(false);
 
-    const server = STORE_SELECTED.asState()
+    const serverIndex = STORE_SELECTED.asState()
     const list = STORE_SERVERS.asState()
     const status = STORE_STATUS.asState()
 
     if (!status.fetcher) {
-        status.fetcher = createFetcher(server)
+        status.fetcher = createFetcher()
     }
 
     const optionchanged = (e: any) => {
-        console.log(list[e.target.selectedIndex]);
-        STORE_SELECTED.set(list[e.target.selectedIndex]);
+        STORE_SELECTED.set(e.target.selectedIndex);
     };
+
+    console.debug("Building App.tsx")
 
     return (
         <div className="wrapper">
             <div className="s-topbar">
                 <div>Endpoint:&nbsp;</div>
-                <select onChange={e => optionchanged(e)} value={server.id}>
-                    {list.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name} - {s.url}</option>
+                <select onChange={e => optionchanged(e)} value={serverIndex}>
+                    {list.map((s, i) => (
+                        <option key={i} value={i}>{s.name} - {s.url}</option>
                     ))}
                 </select>
                 <button type="button" aria-label="Open settings dialog"
@@ -65,13 +65,24 @@ function App() {
                               clip-rule="evenodd"></path>
                     </svg>
                 </button>
-
+                {status.lastAuthResponse ?
+                    (<div className="d-flex">
+                        <div>Auth:&nbsp;</div>
+                        <div
+                            className={`d-flex font-monospace align-items-center ${status.lastAuthResponse.success ? 'text-success-emphasis' : 'text-danger-emphasis'}`}
+                            title={status.lastAuthResponse.timestampLocal}>
+                            {status.lastAuthResponse.status}
+                        </div>
+                    </div>)
+                    :
+                    (<div></div>)
+                }
 
             </div>
 
             <div className="s-dialog container-fluid " style={{display: dialog ? "flex" : "none"}}>
                 <div className="">
-                    <ServerManagement dialog={setDialog}/>
+                    <ServerManagement setVisible={setDialog} isVisible={dialog}/>
                 </div>
             </div>
 

@@ -1,7 +1,7 @@
 import {Indexable, Settings, State} from "./types.ts";
 
 
-export function isObject(item: Object) {
+export function isObject(item: any) {
     return (item && typeof item === 'object' && !Array.isArray(item));
 }
 
@@ -12,15 +12,14 @@ export default function mergeDeep<T extends Indexable>(target: T, source: T): T 
                 if (!(key in target))
                     Object.assign(target, {[key]: source[key]});
                 else {
-                    // @ts-ignore
-                    output[key] = mergeDeep(target[key], source[key]);
+                    (target as any)[key] = mergeDeep(target[key], source[key]);
                 }
             } else {
                 Object.assign(target, {[key]: source[key]});
             }
         });
     }
-    return target;
+    return source;
 }
 
 export function exportResponseAsCsv(state: State, settings: Settings): [string | null, string | null] {

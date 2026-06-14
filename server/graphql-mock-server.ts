@@ -1,5 +1,8 @@
 import {ApolloServer, BaseContext, GraphQLRequestContext} from '@apollo/server';
-import {startStandaloneServer} from '@apollo/server/standalone';
+import {expressMiddleware} from '@as-integrations/express4';
+import express from 'express'; // Imported Express
+import cors from 'cors';
+
 
 // 1. Schema and Mock Data (Same as before)
 const typeDefs = `#graphql
@@ -41,9 +44,6 @@ const requestLogger = {
         let headers = requestContext.request.http?.headers && [...requestContext.request.http.headers.entries()].map(([k, v]) => k + '=' + v).join('\n\t') || '';
         console.log(`[${date}] 🛰️  Incoming Request: ${operationName}\nHeaders: \n\t${headers}`);
 
-        // Optional: Log the full query if you want more detail
-        // console.log(`Query: ${requestContext.request.query}`);
-
         return {
             async didEncounterErrors(rc: any) {
                 console.error(`[${date}] ❌ Errors:`, rc.errors);
@@ -52,18 +52,49 @@ const requestLogger = {
     },
 };
 
-// 3. Add the plugin to the server instance
+// 3. Create the server instance
 const server = new ApolloServer({
     typeDefs,
     resolvers,
-    plugins: [requestLogger] // <--- Plugin added here
+    plugins: [requestLogger]
 });
 
 async function startServer() {
-    const {url} = await startStandaloneServer(server, {
-        listen: {port: 4000},
+
+    await server.start();
+
+    const app = express();
+
+    // 2. Define CORS logic based on environment variables
+    if (process.env.NODE_ENV === 'development') {
+        // Option A: In development, "disable" restrictions by allowing ALL origins
+        app.use(cors());
+        console.log('🔓 CORS restrictions dropped (Development Mode)');
+    } else if (process.env.ALLOWED_ORIGIN) {
+        // Option B: In production, explicitly restrict to the domain provided in your env
+        app.use(cors({
+            origin: process.env.ALLOWED_ORIGIN,
+            credentials: true // Optional: Allow cookies/headers if needed
+        }));
+        console.log(`🔒 CORS locked down to: ${process.env.ALLOWED_ORIGIN}`);
+    } else {
+        // Fallback: If no env variable is provided, enforce strict same-origin (no CORS headers)
+        console.log('🛡️  Strict Same-Origin enforced (No CORS headers applied)');
+    }
+
+
+    // By NOT adding any 'cors' middleware here, the server won't emit CORS headers.
+    // This forces the browser to block all cross-origin requests, ensuring strict same-origin behavior.
+    app.use(
+        '/graphql',
+        express.json(), // Middleware to parse JSON request bodies
+        expressMiddleware(server)
+    );
+
+    const PORT = 4000;
+    app.listen(PORT, () => {
+        console.log(`\n🚀 Mock GraphQL Server ready at: http://localhost:${PORT}/graphql`);
     });
-    console.log(`\n🚀 Mock GraphQL Server ready at: ${url}`);
 }
 
 startServer();

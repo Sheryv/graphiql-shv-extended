@@ -1,7 +1,8 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {AUTH_TYPES, OAuth, OAuthFlowType, Server} from '../server.ts'; // Adjust path
-import {STORE_SERVERS} from "../store.ts";
+import {AUTH_TYPES, OAuthFlowType, Server} from '../server.ts'; // Adjust path
+import {STORE_SELECTED, STORE_SERVERS} from "../store.ts";
 import './ServerManagement.scss';
+import {buildOAuth, buildServer, buildTokenUrl} from "../auth-token-manager.ts";
 
 interface HeaderRow {
     id: string;
@@ -10,17 +11,18 @@ interface HeaderRow {
 }
 
 interface ServerManagementProps {
-    dialog?: (value: (((prevState: boolean) => boolean) | boolean)) => void
+    setVisible?: (value: (((prevState: boolean) => boolean) | boolean)) => void,
+    isVisible?: boolean
 }
 
-export default function ServerManagement({dialog}: ServerManagementProps) {
+export default function ServerManagement({setVisible, isVisible}: ServerManagementProps) {
     // Connect to your global store using standard signature
     const servers: Server[] = STORE_SERVERS.asState();
     const formRef = useRef<HTMLFormElement>(null);
 
     // UI Navigation Trackers
-    const [selectedIndex, setSelectedIndex] = useState<number>(0);
-    const currentServer = servers[selectedIndex];
+    const [selectedIndex, setSelectedIndex] = useState<number>(STORE_SELECTED.getSnapshot());
+    let currentServer = servers[selectedIndex];
 
     // Form Field State Definitions
     const [name, setName] = useState('');
@@ -41,8 +43,15 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
     const [error, setError] = useState('');
     const [placeholderForOverwrite, setPlaceholderForOverwrite] = useState('');
 
+    useEffect(() => {
+        if (isVisible) {
+            setSelectedIndex(STORE_SELECTED.getSnapshot());
+        }
+    }, [isVisible]);
+
     // Synchronize state structures upon selection changes
     useEffect(() => {
+        currentServer = servers[selectedIndex];
         if (currentServer) {
             setName(currentServer.name);
             setUrl(currentServer.url);
@@ -77,7 +86,7 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
                 setPassword('');
             }
         }
-    }, [selectedIndex, currentServer]);
+    }, [selectedIndex]);
 
     useEffect(() => {
         if (servers.some((s, i) => s.name === name && i !== selectedIndex)) {
@@ -88,20 +97,20 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
     }, [selectedIndex, name]);
 
     useEffect(() => {
-        console.log('update', currentServer)
+        console.debug('update', currentServer)
 
         if (hasOAuth) {
-            setPlaceholderForOverwrite(new OAuth(
+            setPlaceholderForOverwrite(buildTokenUrl(buildOAuth({
                 clientId,
                 realm,
                 flowType,
-                tokenUrl || undefined,
-                redirectUrl || undefined,
-                authnUrl || undefined,
-                clientSecret || undefined,
-                username || undefined,
-                password || undefined
-            ).buildTokenUrl(url));
+                tokenUrl: tokenUrl || undefined,
+                redirectUri: redirectUrl || undefined,
+                authViaUIUrl: authnUrl || undefined,
+                clientSecret: clientSecret || undefined,
+                username: username || undefined,
+                password: password || undefined
+            }), url));
 
         } else {
             setPlaceholderForOverwrite('')
@@ -111,7 +120,12 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
     // Sidebar List Manipulations
     const handleAddServer = () => {
         const base = servers[selectedIndex]
-        const newServerPlaceholder = new Server('New ' + base.name, base.url, base.headers, base.oauth);
+        const newServerPlaceholder = buildServer({
+            name: 'New ' + base.name,
+            url: base.url,
+            headers: base.headers,
+            oauth: base.oauth
+        });
         STORE_SERVERS.addItem(newServerPlaceholder);
         setSelectedIndex(servers.length);
     };
@@ -154,24 +168,31 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
             .map(h => ({[h.key]: h.value}));
 
         const processedOAuth = hasOAuth
-            ? new OAuth(
+            ? buildOAuth({
                 clientId,
                 realm,
                 flowType,
-                tokenUrl || undefined,
-                redirectUrl || undefined,
-                authnUrl || undefined,
-                clientSecret || undefined,
-                username || undefined,
-                password || undefined
-            )
+                tokenUrl: tokenUrl || undefined,
+                redirectUri: redirectUrl || undefined,
+                authViaUIUrl: authnUrl || undefined,
+                clientSecret: clientSecret || undefined,
+                username: username || undefined,
+                password: password || undefined
+            })
             : undefined;
 
         if (!error && (!hasOAuth || (!!clientId && !!realm))) {
-            const updatedServer = new Server(name, url, processedHeaders, processedOAuth, servers[selectedIndex].id);
+            const updatedServer = buildServer({
+                name,
+                url,
+                headers: processedHeaders,
+                oauth: processedOAuth,
+                id: servers[selectedIndex].id
+            });
 
             STORE_SERVERS.updateItem(updatedServer);
-            dialog && dialog(false);
+
+            setVisible && setVisible(false);
         }
 
     };
@@ -181,7 +202,7 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
             {/* LEFT PANEL: Sidebar */}
             <div className="p-3 d-flex justify-content-between align-items-center">
                 <h4 className="m-0">Edit server configuration</h4>
-                <button className="btn p-1" onClick={e => dialog && dialog(false)}>
+                <button className="btn p-1" onClick={e => setVisible && setVisible(false)}>
                     <svg xmlns="http://www.w3.org/2000/svg" height="1em" stroke="currentColor" stroke-width="3"
                          viewBox="0 0 14 14">
                         <path d="m1 1 12 12m0-12L1 13"></path>
@@ -321,8 +342,7 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
                                                    required className="form-control s-form-control"/>
                                         </div>
                                         <div className="col-6">
-                                            <label className="form-label   mb-1">Realm
-                                                *</label>
+                                            <label className="form-label   mb-1">Realm *</label>
                                             <input type="text" value={realm} onChange={e => setRealm(e.target.value)}
                                                    required className="form-control s-form-control"/>
                                         </div>
@@ -337,20 +357,29 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
                                     </div>
 
                                     {flowType == 'standard' && (
-                                        <div>
-                                            <label className="form-label   mb-1">Redirect URL overwrite
-                                                (Optional)</label>
-                                            <input type="text" value={redirectUrl}
-                                                   onChange={e => setRedirectUrl(e.target.value)}
-                                                   className="form-control s-form-control"/>
+                                        <div className="d-flex flex-column gap-3">
+                                            <div>
+                                                <label className="form-label   mb-1">Auth GUI URL overwrite
+                                                    (Optional)</label>
+                                                <input type="text" value={authnUrl}
+                                                       onChange={e => setAuthnUrl(e.target.value)}
+                                                       className="form-control s-form-control"/>
+                                            </div>
+                                            <div>
+                                                <label className="form-label   mb-1">Redirect URL overwrite
+                                                    (Optional)</label>
+                                                <input type="text" value={redirectUrl}
+                                                       onChange={e => setRedirectUrl(e.target.value)}
+                                                       className="form-control s-form-control"/>
+                                            </div>
                                         </div>
                                     )}
 
                                     {flowType == 'servicea' && (
                                         <div>
-                                            <label className="form-label   mb-1">Client secret (Optional)</label>
+                                            <label className="form-label   mb-1">Client secret *</label>
                                             <input type="password" value={clientSecret} autoComplete="secret"
-                                                   onChange={e => setClientSecret(e.target.value)}
+                                                   onChange={e => setClientSecret(e.target.value)} required
                                                    className="form-control s-form-control"/>
                                         </div>
                                     )}
@@ -358,15 +387,15 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
                                     {flowType == 'direct' && (
                                         <div className="row g-2">
                                             <div className="col-6">
-                                                <label className="form-label   mb-1">Username (Optional)</label>
+                                                <label className="form-label   mb-1">Username *</label>
                                                 <input type="text" value={username} autoComplete="username"
-                                                       onChange={e => setUsername(e.target.value)}
+                                                       onChange={e => setUsername(e.target.value)} required
                                                        className="form-control s-form-control"/>
                                             </div>
                                             <div className="col-6">
-                                                <label className="form-label   mb-1">Password (Optional)</label>
+                                                <label className="form-label   mb-1">Password *</label>
                                                 <input type="password" value={password} autoComplete="password"
-                                                       onChange={e => setPassword(e.target.value)}
+                                                       onChange={e => setPassword(e.target.value)} required
                                                        className="form-control s-form-control"/>
                                             </div>
                                         </div>
@@ -380,7 +409,7 @@ export default function ServerManagement({dialog}: ServerManagementProps) {
 
 
             <div className="p-3 d-flex border-top justify-content-end align-items-center gap-3">
-                <button className="btn btn-text" onClick={e => dialog && dialog(false)}>Cancel</button>
+                <button className="btn btn-text" onClick={e => setVisible && setVisible(false)}>Cancel</button>
                 <button className="btn btn-primary" onClick={e => handleSave(e)}>Save</button>
             </div>
         </div>

@@ -27,6 +27,11 @@ interface ResponseStatus {
 
 export interface State {
     lastResponse?: ResponseStatus;
+    lastAuthResponse?: {
+        status: string;
+        success: boolean;
+        timestampLocal: string;
+    };
     fetcher?: Fetcher;
 }
 

@@ -1,10 +1,33 @@
-import {Server} from "./server.ts";
+import {OAuth, Server} from "./server.ts";
 
 interface TokenStorage {
     accessToken: string;
     refreshToken?: string;
     expiresAt: number; // Timestamp in ms
 }
+
+
+export function buildServer(defaults: Omit<Server, 'id'>): Server {
+    const d: Server = {
+        name: defaults.name,
+        url: defaults.url,
+        headers: [],
+        id: Math.random().toString(36).substring(2, 8),
+    }
+
+    return Object.assign(d, defaults);
+}
+
+export function buildOAuth(defaults: OAuth): OAuth {
+    const d: OAuth = {
+        clientId: defaults.clientId,
+        realm: defaults.realm,
+        flowType: 'direct',
+    }
+
+    return Object.assign(d, defaults);
+}
+
 
 // Helper to decode JWT expiration without bringing in a heavy library
 function isTokenExpired(tokenData: TokenStorage | null): boolean {
@@ -28,7 +51,24 @@ function isTokenExpired(tokenData: TokenStorage | null): boolean {
     }
 }
 
-export async function getValidToken(server: Server): Promise<string | null> {
+
+export function buildTokenUrl(oath: OAuth, baseUrl: string) {
+    return oath.tokenUrl || baseUrl.replace(/\/graphql$/, '') + `/auth/realms/${oath.realm}/protocol/openid-connect/token`;
+}
+
+// Computes the Keycloak login page URL for standard flow
+function buildAuthUrl(oath: OAuth, baseUrl: string) {
+    const base = oath.authViaUIUrl || oath.tokenUrl?.replace(/\/token$/, '/auth') || baseUrl.replace(/\/graphql$/, '') + `/auth/realms/${oath.realm}/protocol/openid-connect/auth`;
+    const params = new URLSearchParams({
+        client_id: oath.clientId,
+        redirect_uri: oath.redirectUri || window.location.origin,
+        response_type: 'code',
+        scope: 'openid'
+    });
+    return `${base}?${params.toString()}`;
+}
+
+export async function getValidToken(server: Server): Promise<TokenStorage | null> {
     const oauth = server.oauth;
     if (!oauth) return null;
 
@@ -38,10 +78,10 @@ export async function getValidToken(server: Server): Promise<string | null> {
 
     // 1. Check if we already have a valid access token
     if (tokenData && !isTokenExpired(tokenData)) {
-        return tokenData.accessToken;
+        return tokenData;
     }
 
-    const tokenUrl = oauth.buildTokenUrl(server.url);
+    const tokenUrl = buildTokenUrl(oauth, server.url);
 
     // 2. Try to refresh the token if we have a refresh token
     if (tokenData?.refreshToken && isTokenExpired(tokenData)) {
@@ -67,7 +107,7 @@ export async function getValidToken(server: Server): Promise<string | null> {
                     expiresAt: Date.now() + (data.expires_in * 1000)
                 };
                 localStorage.setItem(storageKey, JSON.stringify(updatedData));
-                return updatedData.accessToken;
+                return updatedData;
             }
         } catch (e) {
             console.error("Failed to refresh token, falling back to full authentication", e);
@@ -111,7 +151,7 @@ export async function getValidToken(server: Server): Promise<string | null> {
             body: body.toString(),
         });
 
-        if (!res.ok) throw new Error(`Keycloak direct auth failed: ${res.statusText}`);
+        if (!res.ok) throw new Error(`OIDC ${oauth.flowType} auth failed: ${res.statusText}`);
 
         const data = await res.json();
         const newData: TokenStorage = {
@@ -120,7 +160,7 @@ export async function getValidToken(server: Server): Promise<string | null> {
             expiresAt: Date.now() + (data.expires_in * 1000)
         };
         localStorage.setItem(storageKey, JSON.stringify(newData));
-        return newData.accessToken;
+        return newData;
 
     } else if (oauth.flowType === 'standard') {
         // Standard Flow (Authorization Code)
@@ -147,7 +187,7 @@ export async function getValidToken(server: Server): Promise<string | null> {
                 body: body.toString(),
             });
 
-            if (!res.ok) throw new Error(`Keycloak code exchange failed: ${res.statusText}`);
+            if (!res.ok) throw new Error(`OIDC code exchange failed: ${res.statusText}`);
 
             const data = await res.json();
             const newData: TokenStorage = {
@@ -156,13 +196,14 @@ export async function getValidToken(server: Server): Promise<string | null> {
                 expiresAt: Date.now() + (data.expires_in * 1000)
             };
             localStorage.setItem(storageKey, JSON.stringify(newData));
-            return newData.accessToken;
+            return newData;
         } else {
             // No token, no code in URL: Redirect user to Keycloak login page
-            window.location.href = oauth.buildAuthUrl(server.url);
+            window.location.href = buildAuthUrl(oauth, server.url);
             // Block execution while redirect happens
             await new Promise(() => {
-            });
+
+            })
             return null;
         }
     }

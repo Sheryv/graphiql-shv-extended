@@ -2,15 +2,17 @@ import {Server} from "./server.ts";
 import {Fetcher} from "@graphiql/toolkit";
 import {FetcherOpts, FetcherParams} from "@graphiql/toolkit/src/create-fetcher/types.ts";
 import {getValidToken} from "./auth-token-manager.ts";
-import {STORE_STATUS} from "./store.ts";
+import {findCurrentServer, STORE_STATUS} from "./store.ts";
 
 
-export default function createFetcher(server: Server): Fetcher {
-    console.log('Fetcher created for ' + server.name);
+export default function createFetcher(): Fetcher {
+    console.log('Fetcher created');
 
     return async (graphQLParams: FetcherParams, fetcherOpts?: FetcherOpts) => {
         let now = new Date();
         try {
+            const server: Server = findCurrentServer();
+
             const headers = {
                 Accept: 'application/graphql-response+json, application/json;q=0.9',
                 'Content-Type': 'application/json',
@@ -18,21 +20,46 @@ export default function createFetcher(server: Server): Fetcher {
             } as Record<string, string>;
 
 
-            for (let header of server.headers) {
+            for (let header of server.headers || []) {
                 headers[header.name] = header.value;
             }
 
             if (server.oauth) {
                 try {
-                    const token = await getValidToken(server);
-                    if (token) {
-                        headers['Authorization'] = `Bearer ${token}`;
+                    const tokenData = await getValidToken(server);
+                    if (tokenData) {
+                        const {accessToken, expiresAt} = tokenData;
+                        headers['Authorization'] = `Bearer ${accessToken}`;
+                        STORE_STATUS.setSome({
+                            lastAuthResponse: {
+                                status: `Token OK, expires in ${(expiresAt - now.valueOf()) / 1000} sec.`,
+                                success: true,
+                                timestampLocal: now.toLocaleString()
+                            }
+                        })
+                    } else {
+                        STORE_STATUS.setSome({
+                            lastAuthResponse: {
+                                status: `No token fetched, see console`,
+                                success: false,
+                                timestampLocal: now.toLocaleString()
+                            }
+                        })
                     }
                 } catch (error) {
                     console.error("OAuth authentication error:", error);
-                    // Depending on requirements, you might want to throw or fallback silently
-                    throw error;
+                    STORE_STATUS.setSome({
+                        lastAuthResponse: {
+                            status: `Error fetching token, see console (${error})`,
+                            success: false,
+                            timestampLocal: now.toLocaleString()
+                        }
+                    })
                 }
+            } else {
+                STORE_STATUS.setSome({
+                    lastAuthResponse: undefined
+                })
             }
 
             now = new Date();

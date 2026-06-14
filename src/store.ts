@@ -1,9 +1,10 @@
 import {Server} from "./server.ts";
 import {useSyncExternalStore} from "react";
 import {Indexable, Item, Settings, SETTINGS_DEFAULT, State} from "./types.ts";
-import mergeDeep from "./tools.ts";
+import mergeDeep, {isObject} from "./tools.ts";
+import {buildServer} from "./auth-token-manager.ts";
 
-class Store<T extends Indexable> {
+class Store<T> {
 
     public data: T
 
@@ -63,12 +64,15 @@ class Store<T extends Indexable> {
     }
 
     protected mergeDataFromDisk(data: T, initialData: T): T {
-        return mergeDeep(initialData, data);
+        if (!isObject(data)) {
+            return data;
+        }
+        return mergeDeep(initialData as any, data);
     }
 }
 
 
-class ArrayStore<A extends Item> extends Store<Array<A>> {
+class ArrayStore<A extends Item | Indexable> extends Store<Array<A>> {
 
     updateItem(data: A) {
         const copy = [...this.data];
@@ -108,12 +112,15 @@ class ArrayStore<A extends Item> extends Store<Array<A>> {
 
 
 const initial = [
-    new Server('Nasa', 'https://graphql.earthdata.nasa.gov/api'),
-    new Server('Yelp', 'https://docs.developer.yelp.com/graphql')
-
+    buildServer({name: 'Local', url: 'https://graphql.earthdata.nasa.gov/api'}),
 ]
 
 export const STORE_SERVERS = new ArrayStore<Server>('graphiql-extended:server_list', initial)
-export const STORE_SELECTED = new Store<Server>('graphiql-extended:selected_server', STORE_SERVERS.getSnapshot()[0])
+export const STORE_SELECTED = new Store<number>('graphiql-extended:selected_server', 0)
 export const STORE_SETTINGS = new Store<Settings>('graphiql-extended:settings', SETTINGS_DEFAULT)
 export const STORE_STATUS = new Store<State>('graphiql-extended:status', {}, false)
+
+export function findCurrentServer(index?: number): Server {
+    const i = index ?? STORE_SELECTED.getSnapshot();
+    return STORE_SERVERS.getSnapshot()[i]
+}
