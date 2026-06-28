@@ -2,7 +2,7 @@
   "name": "GraphiQL Extended SHV",
   "short_name": "graphiql-shv-extended",
   "description": "Graphiql with support for server selection and auth",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "manifest_version": 3,
   "content_scripts": [
   ],
