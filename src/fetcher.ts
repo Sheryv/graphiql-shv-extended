@@ -32,7 +32,7 @@ export default function createFetcher(): Fetcher {
                         headers['Authorization'] = `Bearer ${accessToken}`;
                         STORE_STATUS.setSome({
                             lastAuthResponse: {
-                                status: `Token OK, expires in ${(expiresAt - now.valueOf()) / 1000} sec.`,
+                                status: `Token OK, expires at ${new Date(expiresAt).toTimeString()} sec.`,
                                 success: true,
                                 timestampLocal: now.toLocaleString()
                             }

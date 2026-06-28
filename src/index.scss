@@ -68,6 +68,10 @@ body {
 .graphiql-container {
   margin-top: -10px !important;
   height: calc(100% - 20px) !important;
+
+  a {
+    text-decoration: none !important;
+  }
 }
 
 .s-topbar {
@@ -85,6 +89,11 @@ body {
   gap: 10px;
   z-index: 1000 !important;
   position: relative;
+
+  select {
+    width: 600px;
+    max-width: 50%;
+  }
 }
 
 .s-icon-btn {

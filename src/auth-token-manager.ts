@@ -73,6 +73,7 @@ export async function getValidToken(server: Server): Promise<TokenStorage | null
     if (!oauth) return null;
 
     const storageKey = `graphiql-extended:token_${server.id}`;
+    const wasRedirectedToOidcKey = `graphiql-extended:redirected`;
     const storedDataStr = localStorage.getItem(storageKey);
     let tokenData: TokenStorage | null = storedDataStr ? JSON.parse(storedDataStr) : null;
 
@@ -151,7 +152,7 @@ export async function getValidToken(server: Server): Promise<TokenStorage | null
             body: body.toString(),
         });
 
-        if (!res.ok) throw new Error(`OIDC ${oauth.flowType} auth failed: ${res.statusText}`);
+        if (!res.ok) throw new Error(`OIDC ${oauth.flowType} auth failed: ${res.status} ${res.statusText}`);
 
         const data = await res.json();
         const newData: TokenStorage = {
@@ -160,6 +161,7 @@ export async function getValidToken(server: Server): Promise<TokenStorage | null
             expiresAt: Date.now() + (data.expires_in * 1000)
         };
         localStorage.setItem(storageKey, JSON.stringify(newData));
+        localStorage.removeItem(wasRedirectedToOidcKey);
         return newData;
 
     } else if (oauth.flowType === 'standard') {
@@ -187,7 +189,7 @@ export async function getValidToken(server: Server): Promise<TokenStorage | null
                 body: body.toString(),
             });
 
-            if (!res.ok) throw new Error(`OIDC code exchange failed: ${res.statusText}`);
+            if (!res.ok) throw new Error(`OIDC code exchange failed: ${res.status} ${res.statusText}`);
 
             const data = await res.json();
             const newData: TokenStorage = {
@@ -196,14 +198,32 @@ export async function getValidToken(server: Server): Promise<TokenStorage | null
                 expiresAt: Date.now() + (data.expires_in * 1000)
             };
             localStorage.setItem(storageKey, JSON.stringify(newData));
+            localStorage.removeItem(wasRedirectedToOidcKey);
             return newData;
         } else {
-            // No token, no code in URL: Redirect user to Keycloak login page
-            window.location.href = buildAuthUrl(oauth, server.url);
-            // Block execution while redirect happens
-            await new Promise(() => {
 
-            })
+            // No token, no code in URL: Redirect user to Keycloak login page
+            const url = buildAuthUrl(oauth, server.url);
+            let redirect = false;
+
+            if (!!localStorage.getItem(wasRedirectedToOidcKey)) {
+                if (confirm(`Continue redirect to \n\n${url}?`)) {
+                    redirect = true;
+                }
+            } else {
+                redirect = true;
+            }
+
+            if (redirect) {
+                localStorage.setItem(wasRedirectedToOidcKey, '1');
+
+                window.location.href = url;
+                // Block execution while redirect happens
+                await new Promise(() => {
+
+                })
+            }
+
             return null;
         }
     }
