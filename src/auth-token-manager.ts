@@ -132,6 +132,7 @@ export async function getValidToken(server: Server): Promise<TokenStorage | null
                 username: oauth.username,
                 password: oauth.password,
                 scope: 'openid',
+                ...(oauth.clientSecret && {client_secret: oauth.clientSecret})
             });
         } else {
             if (!oauth.clientSecret) {

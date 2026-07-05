@@ -375,14 +375,6 @@ export default function ServerManagement({setVisible, isVisible}: ServerManageme
                                         </div>
                                     )}
 
-                                    {flowType == 'servicea' && (
-                                        <div>
-                                            <label className="form-label   mb-1">Client secret *</label>
-                                            <input type="password" value={clientSecret} autoComplete="secret"
-                                                   onChange={e => setClientSecret(e.target.value)} required
-                                                   className="form-control s-form-control"/>
-                                        </div>
-                                    )}
 
                                     {flowType == 'direct' && (
                                         <div className="row g-2">
@@ -398,6 +390,23 @@ export default function ServerManagement({setVisible, isVisible}: ServerManageme
                                                        onChange={e => setPassword(e.target.value)} required
                                                        className="form-control s-form-control"/>
                                             </div>
+                                        </div>
+                                    )}
+
+                                    {(flowType == 'servicea') && (
+                                        <div>
+                                            <label className="form-label   mb-1">Client secret *</label>
+                                            <input type="password" value={clientSecret} autoComplete="secret"
+                                                   onChange={e => setClientSecret(e.target.value)} required
+                                                   className="form-control s-form-control"/>
+                                        </div>
+                                    )}
+                                    {(flowType == 'direct') && (
+                                        <div>
+                                            <label className="form-label   mb-1">Client secret (Optional)</label>
+                                            <input type="password" value={clientSecret} autoComplete="secret"
+                                                   onChange={e => setClientSecret(e.target.value)}
+                                                   className="form-control s-form-control"/>
                                         </div>
                                     )}
                                 </div>

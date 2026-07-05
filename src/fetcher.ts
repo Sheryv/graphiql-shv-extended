@@ -16,6 +16,7 @@ export default function createFetcher(): Fetcher {
             const headers = {
                 Accept: 'application/graphql-response+json, application/json;q=0.9',
                 'Content-Type': 'application/json',
+                ...fetcherOpts?.headers
 
             } as Record<string, string>;
 

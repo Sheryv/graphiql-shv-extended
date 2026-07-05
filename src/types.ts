@@ -1,4 +1,5 @@
 import {Fetcher} from "@graphiql/toolkit";
+import {Server} from "./server.ts";
 
 export interface Indexable {
     [index: string]: any;
@@ -40,4 +41,21 @@ export const SETTINGS_DEFAULT: Settings = {
     csvExportArrayPath: '',
     csvExportFields: [],
     extractEmbedJsonPath: ''
+}
+
+export interface GraphiqlTab {
+    id: string;
+    hash?: string;
+    title: string;
+    query: string;
+    variables: string;
+    headers?: any,
+    operationName?: string;
+    response?: string;
+}
+
+export interface ConfigExport {
+    time: string;
+    tabs: GraphiqlTab[];
+    servers: Server[];
 }

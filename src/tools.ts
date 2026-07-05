@@ -1,4 +1,6 @@
-import {Indexable, Settings, State} from "./types.ts";
+import {ConfigExport, GraphiqlTab, Indexable, Settings, State} from "./types.ts";
+import {STORE_SERVERS} from "./store.ts";
+import {buildServer} from "./auth-token-manager.ts";
 
 
 export function isObject(item: any) {
@@ -144,4 +146,70 @@ function getByPath(obj: Indexable, path: string): any {
             // Otherwise, access the property normally
             return matchingValues(key, current);
         }, obj);
+}
+
+export function exportConfig() {
+    const date = new Date();
+    const tabs = (JSON.parse(localStorage.getItem('graphiql:tabState') || '{}'))['tabs'] as GraphiqlTab[];
+    const data: ConfigExport = {
+        time: date.toISOString(),
+        tabs: tabs || [],
+        servers: STORE_SERVERS.getSnapshot() || []
+    }
+
+    const h = date.getHours().toString().padStart(2, '0');
+    const m = date.getMinutes().toString().padStart(2, '0');
+    const s = date.getSeconds().toString().padStart(2, '0');
+    handleFileDownload(
+        JSON.stringify(data, null, 2),
+        `graphiql-extended-config_${date.toISOString().split('T')[0]}_${h}-${m}-${s}.json`,
+        'appliction/json'
+    )
+}
+
+export function importConfig(content: string, replace: boolean) {
+    const config: ConfigExport = JSON.parse(content)
+    const servers = (config.servers || []).map(e => buildServer(e));
+    const tabs: GraphiqlTab[] = [];
+    for (let i = 0; i < config.tabs?.length || 0; i++) {
+        let tab = config.tabs[i];
+        if (tab && tab.id && tab.title) {
+            tab = Object.assign({
+                variables: '',
+                query: ''
+            }, tab);
+
+            tabs.push(tab);
+        } else {
+            console.error(`Incorrect tab object with id ${tab?.id} at index ${i}`);
+        }
+    }
+
+    for (let server of servers) {
+        STORE_SERVERS.updateItem(server)
+    }
+
+    const currentTabWrapper = (JSON.parse(localStorage.getItem('graphiql:tabState') || '{}')) as {
+        tabs: GraphiqlTab[]
+    };
+    if (replace) {
+        // STORE_SERVERS.set(servers);
+        currentTabWrapper.tabs = tabs
+    } else {
+
+        let newTabs = [...currentTabWrapper.tabs]
+        tabs.forEach((imported, i) => {
+            const matching = currentTabWrapper.tabs.find(t => t.id === imported.id)
+            if (matching) {
+                matching.query = matching.query + '\n\n# Imported\n\n' + imported.query;
+                matching.variables = imported.variables;
+                matching.headers = imported.headers;
+            } else {
+                newTabs.push(imported);
+            }
+        })
+        currentTabWrapper.tabs = newTabs;
+    }
+    localStorage.setItem('graphiql:tabState', JSON.stringify(currentTabWrapper));
+    window.location.reload();
 }
