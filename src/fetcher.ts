@@ -80,7 +80,7 @@ export default function createFetcher(): Fetcher {
                     body: json,
                     status: response.status + ' ' + response.statusText,
                     success: response.ok,
-                    operationName: graphQLParams.operationName || undefined,
+                    operationName: graphQLParams?.operationName || undefined,
                     length: contentLength && Number(contentLength) || undefined,
                     duration: duration,
                     timestamp: now.valueOf(),
@@ -102,6 +102,7 @@ export default function createFetcher(): Fetcher {
                     timestampLocal: now.toLocaleString()
                 }
             })
+            throw error;
         }
     }
 }

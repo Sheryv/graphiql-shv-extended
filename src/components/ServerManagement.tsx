@@ -203,7 +203,7 @@ export default function ServerManagement({setVisible, isVisible}: ServerManageme
             <div className="p-3 d-flex justify-content-between align-items-center">
                 <h4 className="m-0">Edit server configuration</h4>
                 <button className="btn p-1" onClick={e => setVisible && setVisible(false)}>
-                    <svg xmlns="http://www.w3.org/2000/svg" height="1em" stroke="currentColor" stroke-width="3"
+                    <svg xmlns="http://www.w3.org/2000/svg" height="1em" stroke="currentColor" strokeWidth="3"
                          viewBox="0 0 14 14">
                         <path d="m1 1 12 12m0-12L1 13"></path>
                     </svg>

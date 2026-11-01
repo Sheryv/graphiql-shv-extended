@@ -4,7 +4,7 @@ import {Indexable, Item, Settings, SETTINGS_DEFAULT, State} from "./types.ts";
 import mergeDeep, {isObject} from "./tools.ts";
 import {buildServer} from "./auth-token-manager.ts";
 
-class Store<T> {
+export class Store<T> {
 
     public data: T
 
@@ -72,7 +72,7 @@ class Store<T> {
 }
 
 
-class ArrayStore<A extends Item | Indexable> extends Store<Array<A>> {
+export class ArrayStore<A extends Item | Indexable> extends Store<Array<A>> {
 
     updateItem(data: A) {
         const copy = [...this.data];
