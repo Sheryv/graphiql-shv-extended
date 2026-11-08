@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
+import 'graphiql/setup-workers/vite';
 import App from './components/App';
 import './index.scss'
 

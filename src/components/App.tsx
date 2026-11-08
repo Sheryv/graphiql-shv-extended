@@ -2,11 +2,9 @@ import {GraphiQL} from 'graphiql';
 import 'graphiql/style.css';
 import {HISTORY_PLUGIN} from '@graphiql/plugin-history';
 import '@graphiql/plugin-history/style.css';
-import React from "react";
-import {explorerPlugin as createExplorerPlugin} from '@graphiql/plugin-explorer';
+import React, {useEffect, useState} from "react";
 import {collectionsPlugin} from '@graphiql/plugin-collections';
 import {QUERY_BUILDER_PLUGIN} from '@graphiql/plugin-query-builder';
-import '@graphiql/plugin-explorer/style.css';
 import createFetcher from "../fetcher.ts";
 import ImportConfig from "./ImportConfig.tsx";
 import {GraphiQLPlugin, ToolbarButton} from "@graphiql/react";
@@ -15,10 +13,9 @@ import {TabManagerPlugin} from "./TabManagerPlugin.tsx";
 import {Footer} from "./Footer.tsx";
 import {Topbar} from "./Topbar.tsx";
 import createTransportWrapper from "../fetcher.ts";
-
-const explorerPlugin = createExplorerPlugin({
-    showAttribution: false,
-});
+import {createTransport} from "@graphiql/toolkit";
+import ReactDOM from "react-dom";
+import TopbarPortal from "./TopbarPortal.tsx";
 
 const tabManagerPlugin: GraphiQLPlugin = {
     title: 'Tab Manager',
@@ -32,11 +29,10 @@ function App() {
     const localFetcher = createTransportWrapper();
 
     console.debug("Building App.tsx");
-
     return (
         <div className="wrapper">
             <Topbar/>
-
+            <TopbarPortal />
             <GraphiQL
                 transport={localFetcher}
                 plugins={[QUERY_BUILDER_PLUGIN, collections, HISTORY_PLUGIN, tabManagerPlugin]}

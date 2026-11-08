@@ -336,13 +336,6 @@
     react-compiler-runtime "^1.0.0"
     zustand "^5"
 
-"@graphiql/plugin-explorer@^5.1.5":
-  version "5.1.5"
-  resolved "https://registry.yarnpkg.com/@graphiql/plugin-explorer/-/plugin-explorer-5.1.5.tgz#871666ade912d7dccfb3e4c5c94161e5f78719c4"
-  integrity sha512-JzidX414tKvujkBj1q+laOOfV6H2D77SOYutNjFWMfpX2mEn0Be5iguqlBZrgZFTNfd1F9FKmK8Jc0ehOIKtiw==
-  dependencies:
-    graphiql-explorer "^0.9.0"
-
 "@graphiql/plugin-history@^1.0.0":
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/@graphiql/plugin-history/-/plugin-history-1.0.0.tgz#1cfeeb251dcd71ebff6d204c09e507dc2802a53e"
@@ -1673,11 +1666,6 @@ gopd@^1.0.1, gopd@^1.2.0:
   resolved "https://registry.yarnpkg.com/gopd/-/gopd-1.2.0.tgz#89f56b8217bdbc8802bd299df6d7f1081d7e51a1"
   integrity sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==
 
-graphiql-explorer@^0.9.0:
-  version "0.9.0"
-  resolved "https://registry.yarnpkg.com/graphiql-explorer/-/graphiql-explorer-0.9.0.tgz#25f6b990bfc3e04e88c0cf419e28d12abe2c4fbe"
-  integrity sha512-fZC/wsuatqiQDO2otchxriFO0LaWIo/ovF/CQJ1yOudmY0P7pzDiP+l9CEHUiWbizk3e99x6DQG4XG1VxA+d6A==
-
 graphiql@^6.0.1:
   version "6.0.1"
   resolved "https://registry.yarnpkg.com/graphiql/-/graphiql-6.0.1.tgz#90b28f3fdfbf8fc92212e91e702ae655916e3436"
@@ -2595,11 +2583,6 @@ vary@^1, vary@^1.1.2:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/vary/-/vary-1.1.2.tgz#2299f02c6ded30d4a5961b0b9f74524a18f634fc"
   integrity sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==
-
-vite-plugin-monaco-editor@1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/vite-plugin-monaco-editor/-/vite-plugin-monaco-editor-1.1.0.tgz#a6238c2e13d5e98dd54a1bc51f6f189325219de3"
-  integrity sha512-IvtUqZotrRoVqwT0PBBDIZPNraya3BxN/bfcNfnxZ5rkJiGcNtO5eAOWWSgT7zullIAEqQwxMU83yL9J5k7gww==
 
 vite-plugin-static-copy@4.1.1:
   version "4.1.1"

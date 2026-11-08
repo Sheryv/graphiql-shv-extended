@@ -77,9 +77,9 @@ body {
 .s-topbar {
 
   font-family: "Fira Code", Consolas, "Courier New", monospace;
-  background-color: var(--c-base);
+  background-color: #052065;
   color: var(--c-text);
-  height: 30px;
+  height: 39px;
   display: flex;
   align-items: center;
   padding-left: 20px;
@@ -88,7 +88,9 @@ body {
   flex-direction: row;
   gap: 10px;
   z-index: 1000 !important;
-  position: relative;
+  position: absolute;
+  top: 100px;
+  left: 122px;
 
   select {
     width: 600px;
@@ -257,4 +259,35 @@ body {
 
 .monaco-editor .find-widget {
   visibility: hidden;
+}
+
+.s-topbar-inline {
+  order: 3;
+  display: inline-flex;
+  flex: 0.5;
+  align-items: center;
+  gap: var(--px-6);
+
+  select {
+    align-items: center;
+    gap: var(--px-6);
+    padding: 0 var(--px-10);
+    background: oklch(var(--bg-canvas));
+    border: 1px solid oklch(var(--border-muted));
+    border-radius: var(--radius-md);
+    min-width: 0;
+    height: 24px;
+    flex: 1;
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-small);
+    display: inline-flex;
+  }
+}
+
+.graphiql-top-bar-endpoint {
+  order: 7;
+}
+
+.graphiql-execute-button {
+  order: 10;
 }
