@@ -1,3 +1,6 @@
+import GraphQLWorker from 'monaco-graphql/esm/graphql.worker?worker';
+import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+
 self["MonacoEnvironment"] = (function (paths) {
     return {
         globalAPI: false,
@@ -13,7 +16,13 @@ self["MonacoEnvironment"] = (function (paths) {
                 }
             }
             return result;
-        }
+        },
+        getWorker(_workerId, label) {
+            if (label === 'graphql') {
+                return new GraphQLWorker();
+            }
+            return new EditorWorker();
+        },
     };
 })({
     "editorWorkerService": "/monacoeditorwork/editor.worker.bundle.js",

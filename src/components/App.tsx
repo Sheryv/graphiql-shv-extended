@@ -1,8 +1,11 @@
-import {GraphiQL, HISTORY_PLUGIN} from 'graphiql';
+import {GraphiQL} from 'graphiql';
 import 'graphiql/style.css';
-import {STORE_STATUS} from "../store.ts";
-import React, {useState} from "react";
+import {HISTORY_PLUGIN} from '@graphiql/plugin-history';
+import '@graphiql/plugin-history/style.css';
+import React from "react";
 import {explorerPlugin as createExplorerPlugin} from '@graphiql/plugin-explorer';
+import {collectionsPlugin} from '@graphiql/plugin-collections';
+import {QUERY_BUILDER_PLUGIN} from '@graphiql/plugin-query-builder';
 import '@graphiql/plugin-explorer/style.css';
 import createFetcher from "../fetcher.ts";
 import ImportConfig from "./ImportConfig.tsx";
@@ -11,8 +14,7 @@ import {exportConfig} from "../tools.ts";
 import {TabManagerPlugin} from "./TabManagerPlugin.tsx";
 import {Footer} from "./Footer.tsx";
 import {Topbar} from "./Topbar.tsx";
-import {Fetcher} from "@graphiql/toolkit";
-
+import createTransportWrapper from "../fetcher.ts";
 
 const explorerPlugin = createExplorerPlugin({
     showAttribution: false,
@@ -24,54 +26,45 @@ const tabManagerPlugin: GraphiQLPlugin = {
     content: () => <TabManagerPlugin/>,
 };
 
+const collections = collectionsPlugin()
 
 function App() {
+    const localFetcher = createTransportWrapper();
 
-    // const [localFetcher, setLocalFetcher] = useState<Fetcher>()
-    //
-    // if (!localFetcher){
-    //     setLocalFetcher(createFetcher())
-    // }
-
-    const localFetcher = createFetcher()
-
-    // const status = STORE_STATUS.asState()
-    //
-    // if (!status.fetcher) {
-    //     status.fetcher = createFetcher()
-    // }
-
-
-    console.debug("Building App.tsx")
+    console.debug("Building App.tsx");
 
     return (
         <div className="wrapper">
-
             <Topbar/>
 
-            <GraphiQL fetcher={localFetcher} plugins={[explorerPlugin, HISTORY_PLUGIN, tabManagerPlugin]}>
-                <GraphiQL.Toolbar>
-                    {({merge, prettify, copy}) => (
-                        <>
-                            {prettify}
-                            {merge}
-                            {copy}
-                            <ToolbarButton onClick={() => exportConfig()}
-                                           label="Export configuration">
-                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" width="24px"
-                                     viewBox="0 -960 960 960" fill="currentColor" style={{opacity: 0.6}}>
-                                    <path
-                                        d="M172.31-180Q142-180 121-201q-21-21-21-51.31v-455.38Q100-738 121-759q21-21 51.31-21h182.3v60h-182.3q-4.62 0-8.46 3.85-3.85 3.84-3.85 8.46v455.38q0 4.62 3.85 8.46 3.84 3.85 8.46 3.85h615.38q4.62 0 8.46-3.85 3.85-3.84 3.85-8.46v-455.38q0-4.62-3.85-8.46-3.84-3.85-8.46-3.85h-182.3v-60h182.3Q818-780 839-759q21 21 21 51.31v455.38Q860-222 839-201q-21 21-51.31 21H172.31ZM480-354 293.85-540.15 336-582.31l114 114V-780h60v311.69l114-114 42.15 42.16L480-354Z"/>
-                                </svg>
-                            </ToolbarButton>
-                            <ImportConfig/>
-                        </>
-                    )}
-                </GraphiQL.Toolbar>
+            <GraphiQL
+                transport={localFetcher}
+                plugins={[QUERY_BUILDER_PLUGIN, collections, HISTORY_PLUGIN, tabManagerPlugin]}
+            >
+                {/* GraphiQL 6 Toolbar Slot via children configuration */}
+                {/*<GraphiQL.Toolbar>*/}
+                {/*    {({merge, prettify, copy}) => (*/}
+                {/*        <div className="graphiql-toolbar">*/}
+                {/*            {prettify}*/}
+                {/*            {merge}*/}
+                {/*            {copy}*/}
+                {/*            <ToolbarButton*/}
+                {/*                onClick={() => exportConfig()}*/}
+                {/*                label="Export configuration"*/}
+                {/*            >*/}
+                {/*                <svg xmlns="http://www.w3.org/2000/svg" height="24px" width="24px"*/}
+                {/*                     viewBox="0 -960 960 960" fill="currentColor" style={{opacity: 0.6}}>*/}
+                {/*                    <path*/}
+                {/*                        d="M172.31-180Q142-180 121-201q-21-21-21-51.31v-455.38Q100-738 121-759q21-21 51.31-21h182.3v60h-182.3q-4.62 0-8.46 3.85-3.85 3.84-3.85 8.46v455.38q0 4.62 3.85 8.46 3.84 3.85 8.46 3.85h615.38q4.62 0 8.46-3.85 3.85-3.84 3.85-8.46v-455.38q0-4.62-3.85-8.46-3.84-3.85-8.46-3.85h-182.3v-60h182.3Q818-780 839-759q21 21 21 51.31v455.38Q860-222 839-201q-21 21-51.31 21H172.31ZM480-354 293.85-540.15 336-582.31l114 114V-780h60v311.69l114-114 42.15 42.16L480-354Z"/>*/}
+                {/*                </svg>*/}
+                {/*            </ToolbarButton>*/}
+                {/*            <ImportConfig/>*/}
+                {/*        </div>*/}
+                {/*    )}*/}
+                {/*</GraphiQL.Toolbar>*/}
                 <GraphiQL.Footer>
                     <Footer/>
                 </GraphiQL.Footer>
-
             </GraphiQL>
         </div>
     );

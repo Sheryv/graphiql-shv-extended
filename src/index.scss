@@ -3,11 +3,11 @@
 //@import "../node_modules/bootstrap/scss/functions";
 
 // 1. Override Bootstrap Core Variables
-$body-bg: hsl(219, 29%, 18%);
-$body-color: hsl(219, 29%, 78%);
-$body-secondary-bg: hsl(217 36% 22%);
-$primary: hsl(338, 100%, 67%);
-$border-color: $body-color;
+$body-bg: hsl(216 28% 7%);
+$body-color: hsl(210 17% 82%);
+$body-secondary-bg: hsl(215 15% 15%);
+$primary: hsl(131 57% 34%);
+$border-color: hsl(131 55% 41%);
 
 $enable-dark-mode: true;
 
@@ -66,8 +66,8 @@ body {
 }
 
 .graphiql-container {
-  margin-top: -10px !important;
-  height: calc(100% - 20px) !important;
+  //margin-top: -10px !important;
+  //height: calc(100% - 20px) !important;
 
   a {
     text-decoration: none !important;
@@ -122,18 +122,20 @@ body {
   left: 0;
   height: 100%;
   width: 100%;
-  background-color: color.change($body-color, $alpha: .15);
+  background-color: oklch(0% 0 0 / .5);
   overflow: auto;
   align-items: center;
   justify-content: center;
   z-index: 1001 !important;
+  color: oklch(var(--fg-default));
 
   & > div {
     min-width: 50%;
     min-height: 40%;
-    background-color: var(--c-base);
-    border: 1px solid var(--c-text);
-    border-radius: 8px;
+    background-color: oklch(var(--bg-elevated));
+    border: 1px solid oklch(var(--border-default));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-popover);
     display: flex;
     flex-direction: column;
     max-width: 80%;
@@ -169,23 +171,28 @@ body {
   }
 
   .s-btn-primary {
-    background-color: var(--c-primary);
+    background: oklch(var(--btn-primary));
+    border-color: oklch(var(--btn-primary-border));
     border-radius: 4px;
     color: var(--c-light);
   }
 
   .s-btn-primary:hover {
-    background-color: var(--c-primary);
-    filter: brightness(85%);
+    background-color: oklch(var(--btn-primary-border));
+    //filter: brightness(85%);
   }
 }
 
 .s-code-viewer {
   background-clip: padding-box;
-  border: var(--bs-border-width) solid var(--bs-border-color);
-  border-radius: var(--bs-border-radius);
-  background-color: tint-color($body-bg, 5%) !important;
+  background: oklch(var(--bg-canvas));
+  border: 1px solid oklch(var(--border-strong));
+  border-radius: var(--radius-sm);
   position: relative;
+
+  & :focus {
+    border-color: oklch(var(--accent-purple));
+  }
 }
 
 .s-dialog-large > div {
@@ -196,10 +203,22 @@ body {
 }
 
 .s-form-control {
-  background-color: tint-color($body-bg, 5%) !important;
+  //background: oklch(var(--bg-overlay));
+  background: oklch(var(--bg-canvas)) !important;
+  border: 1px solid oklch(var(--border-strong));
+  border-radius: var(--radius-sm);
 
   &::placeholder {
     color: color.adjust($body-color, $lightness: -15%);
+  }
+
+  & :focus {
+    border-color: oklch(var(--accent-purple));
+  }
+
+  & :focus-visible {
+    outline: 2px solid oklch(var(--accent-blue));
+    outline-offset: 2px;
   }
 }
 
